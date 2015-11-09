@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8"/>
+<title>My Web Page</title>
+<style>
+body{
+	width: 1360px; /* how wide to make your web page */
+	background-color: teal; /* what color to make the background */
+	margin: 0 auto;
+	padding: 0;
+	font:12px/16px Verdana, sans-serif; /* default font */
+}
+div#main{
+	background-color: #FFF;
+	margin: 20px auto;
+	padding: 10px;
+    overflow: auto;
+    height: 700px;
+}
+
+div#login{
+	background-color: #FFF;
+	padding: 10px;
+    overflow: auto;
+    width:50%;
+    height: 40%;
+    border:3px solid #000;
+	margin: 200px auto;
+	text-align: center;
+}
+
+div#left{
+    float:left;
+    width:10%;
+    height: 98%;
+    border:3px solid #000;
+}
+div#rooms{
+	width:98%;
+    height:85%;
+    overflow: auto;
+	margin: 0 auto;
+}
+div#password{
+	width:98%;
+    height:15%;
+    overflow: auto;
+	margin: 0 auto;
+}
+div#mid{
+	float:left;
+    width:10%;
+    height: 98%;
+    border:3px solid #000;
+}
+div#right{
+    float:right;
+    width:75%;
+    height: 98%;
+    border:3px solid #000;
+    overflow: auto;
+}
+div#inChat{
+    width:98%;
+    height: 98%;
+    overflow: auto;
+	margin: 0 auto;
+}
+div#public{
+	float:left;
+	width: 70%;
+	height: 80%;
+	overflow: auto;
+}
+div#private{
+	float:left;
+	width: 30%;
+	height: 80%;
+	overflow: auto;
+}
+div#chatContent{
+    width:98%;
+    height: 60%;
+    border:1px solid #000;
+	margin: 0 auto;
+	overflow: auto;
+}
+div#sendMessage{
+	width:98%;
+    height: 5%;
+	margin: 0 auto;
+	text-align: center;
+}
+textarea#message{
+	width:98.1%;
+    height: 100%;
+    border:1px solid #000;
+	margin: 0 auto;
+}
+textarea#picture{
+	width:98.1%;
+    height: 100%;
+    border:1px solid #000;
+	margin: 0 auto;
+}
+div#privatechatContent{
+    width:98%;
+    height: 60%;
+    border:1px solid #000;
+	margin: 0 auto;
+}
+div#privatesendMessage{
+	width:98%;
+    height: 5%;
+	margin: 0 auto;
+	text-align: center;
+}
+textarea#privatemessage{
+	width:98.1%;
+    height: 100%;
+    border:1px solid #000;
+	margin: 0 auto;
+}
+.large{
+	font-size: 30px;
+}
+.red{
+	color: red;
+}
+.largeAndRed{
+	font-size: 40px;
+	color: red;
+}
+img{
+	width: 50%;
+	height: 40%;s
+}
+</style>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js" type="text/javascript"></script>
+<script src="/socket.io/socket.io.js"></script>
+
+</head>
+<body>
+    <div id = "login">
+            <p>
+                What's User Name: <input type="text" id="userName" placeholder="User Name">
+                <input type="button" id="createUser" value="Enter">
+
+            </p>
+    </div>
+    <div id="main">
+   
+        <div id="left">
+            <p>Chat Rooms</p>
+            <div id="rooms"></div>
+			<div id="password">
+				Password: <input type="password" id="roomPassword" placeholder="Room Password">
+			</div>
+        </div>
+        
+        <div id="mid">
+            <p>Online Users</p>
+            <div id="users"></div>
+        </div>
+        <div id="right">
+            
+            <div id= "inChat">
+                <p>
+                     Creat a New Chat Room:
+					<input type="text" id="roomName" placeholder="Room Name">
+                    <input type="button" id="createRoom" value="Create without password">
+					<input type="password" id="createRoomPassword" placeholder="Room Password">
+					<input type="button" id="createPassword" value="Create with passoword">
+                </p>
+                <div>
+                    User Name:<div id="currentUserName">public</div>
+                </div>
+                <div>
+                    Current Room:<div id="currentRoom">public</div>
+                </div>
+                <div>
+                    Admin:<div id="admin">user</div>
+                </div>
+				<div id="public">
+					<div id="chatContent">						
+					</div>
+					<div id="sendMessage">
+						<div id="whoTyping"> No one is typing</div>
+						<p>
+							Size-Large: <input type="checkbox" id="large">
+							Color-Red: <input type="checkbox" id="red"> 
+						</p>
+						<textarea id="message" placeholder="Type in your message......" ></textarea>				
+						<input type="button" id="send" value="Send"><br>
+						<textarea id="picture" placeholder="Type in the url of a picture......" ></textarea><br>				
+						<input type="button" id="sendPicture" value="Send Picture">
+					</div>
+				</div>
+				<div id="private">
+					<div id="privatechatContent">
+					</div>
+					<div id="privatesendMessage">
+						<p>
+							Size-Large: <input type="checkbox" id="privatelarge">
+							Color-Red: <input type="checkbox" id="privatered"> 
+						</p>
+						<textarea id="privatemessage" placeholder="Type in your message......" ></textarea>
+						Send private message to: <input type="text" id="sendTo" placeholder="User Name">
+						<input type="button" id="privatesend" value="Send">
+					</div>
+				</div>
+                         
+            </div>                
+        </div>
+ 
+</div>
+<script type ="text/javascript">
+      
+$(document).ready(function(){
+    $("#main").hide();  
+    $("#createUser").click(function(){
+        if ($("#userName").val()) {
+            $("#main").show();
+            $("#login").hide();
+        }
+        else{
+            alert("Please enter your User Name!");
+        }     
+    });
+})
+
+var socketio = io.connect();
+
+//who's typing
+var lastTypedTime = new Date(0); // it's 01/01/1970
+var typingDelayMillis = 3000;
+var whoIsTyping = $('#message');
+function refreshTypingStatus() {
+	var typing = true;
+	var currentRoom = $("#currentRoom").text();
+	var userName = $("#currentUserName").html();
+    if (!whoIsTyping.is(':focus') || whoIsTyping.val() == '' || new Date().getTime() - lastTypedTime.getTime() > typingDelayMillis) {
+        typing =false;
+    } else {
+        typing = true;
+    }
+	socketio.emit("isTyping", {currentRoom:currentRoom, userName:userName, typing:typing});
+}
+function updateLastTypedTime() {
+    lastTypedTime = new Date();
+}
+setInterval(refreshTypingStatus, 100);
+whoIsTyping.keypress(updateLastTypedTime);
+whoIsTyping.blur(refreshTypingStatus);
+
+//Update who's typing
+socketio.on("updateTyping", function(data){
+	var typing = data['typing'];
+	if (typing.length == 0) {
+		$("#whoTyping").html("No one is typing");
+	} else if (typing.length == 1){
+		$("#whoTyping").html(typing[0] + " is typing");
+	} else {
+		var who = "";
+		for (var i = 0; i < typing.length - 1; ++i) {
+			who += typing[i] + ", ";
+		}
+		who += typing[typing.length - 1];
+		$("#whoTyping").html(who + " are typing");
+	}
+});
+
+//Chat Contents
+socketio.on("message_to_client",function(data) {
+   //Append an HR thematic break and the escaped HTML of the new message
+   $("#chatContent").append($("<hr />"));
+   if (data['style'] == "default") {
+	   $("#chatContent").append($("<p>"+data['user']+":  "+data['message']+"<p>"));
+   }
+   else{
+	   $("#chatContent").append($("<div class='" + data['style']+ "'>"+data['user']+":  "+data['message']+"</div>"));
+   }
+});
+
+//private chat
+socketio.on("private_message_to_client",function(data){
+	$("#privatechatContent").append($("<hr />"));
+	if (data['style'] == "default") {
+		$("#privatechatContent").append($("<div>"+"From "+data['from']+ " to "+data["to"]+":  "+data['message']+"</div>"));	
+	}
+	else{
+		$("#privatechatContent").append($("<div class='" + data['style']+ "'>"+"From "+data['from']+ " to "+data["to"]+":  "+data['message']+"</div>"));	
+
+	}
+});
+
+//recive image
+socketio.on("image_to_client", function(data){
+	var src = data['src'];
+	$("#chatContent").append($("<p> <img src='"+src+ "' alt='http://browshot.com/static/images/not-found.png' /></p>"));
+});
+
+//can not send private message
+socketio.on("noUser",function(data){
+	aletr("No user. Can't send private message");
+});
+
+//Change room, update current room, empty chat contents
+socketio.on("updateCurrentRooms",function(data) {
+   var currentRoom = data['croom'];
+   $("#currentRoom").html(currentRoom);
+   $("#chatContent").empty();
+   $("#privatechatContent").empty();
+});
+
+//Be kicked out, alert messgae, back to public room
+socketio.on("beKicked",function(data) {
+	alert("You has been kick out of the room!");
+	var oldName = $("#currentRoom").text();
+    var newName = "public";
+    socketio.emit("enterRoom", {roomName:newName, oldName:oldName});
+	$("#currentRoom").html(newName);
+    $("#chatContent").empty();
+	$("#privatechatContent").empty();
+});
+
+//Be banned out, alert messgae, back to public room
+socketio.on("bebanned",function(data) {
+	alert("You has been banned enter this room!");
+	var oldName = $("#currentRoom").text();
+    var newName = "public";
+    socketio.emit("enterRoom", {roomName:newName, oldName:oldName});
+	$("#currentRoom").html(newName);
+    $("#chatContent").empty();
+	$("#privatechatContent").empty();
+});
+
+//alter
+socketio.on("banned",function(data) {
+	alert("You are banned from this room");
+});
+
+//alert
+socketio.on("userNameExist",function(data) {
+	alert("This user name exists");
+});
+
+//alert
+socketio.on("wrongPassword",function(data) {
+	alert("Wrong password!!");
+});
+
+//Get room list, click room then change a room
+socketio.on("updateRooms",function(data) {
+   //Append an HR thematic break and the escaped HTML of the new message
+   $("#rooms").empty();
+   var rooms = data['rooms'];
+   for (var index = 0; index < rooms.length; ++index) {
+      var node = $("<button class='roomlist'>"+rooms[index]+"</button><br />");
+      $("#rooms").append(node);
+   }
+   $(".roomlist").click(function() {
+      var oldName = $("#currentRoom").text();
+      var newName = $(this).html();
+	  var password = $("#roomPassword").val();
+      socketio.emit("enterRoom", {roomName:newName, oldName:oldName, password:password});
+      $("#chatContent").empty();
+	  $("#privatechatContent").empty();
+   });
+});
+
+//Get user list
+socketio.on("updateUsers",function(data) {
+   //Append an HR thematic break and the escaped HTML of the new message
+   var users = data['users'];
+   var admin = data['admin'];
+   $("#admin").html(admin.userName);
+   $("#users").empty();
+   var curUser = $("#currentUserName").html();
+  if (curUser == admin.userName) {
+		for (var index = 0; index < users.length; ++index) {
+		  var node = $("<br> <div>"+users[index].userName+"</div>");
+		  $("#users").append(node);
+		 if (!(users[index].userName == admin.userName)) {
+			var kick = "<button class='kick' name='"+ users[index].userName+"'>Kick</button>";
+			var ban = "<button class='ban' name='"+ users[index].userName+"'>Ban</button> <br>";
+			$("#users").append(kick, ban);
+		  }
+	   }
+	   $(".kick").click(function(){
+		var kickName = $(this).attr('name');
+		var roomName = $("#currentRoom").html();
+		socketio.emit("kick",{kickName:kickName, roomName:roomName});
+	   });
+	   $(".ban").click(function(){
+		var banName = $(this).attr('name');
+		var roomName = $("#currentRoom").html();
+		socketio.emit("ban",{banName:banName, roomName:roomName});
+	   });
+   }
+   else{
+		for (var index = 0; index < users.length; ++index) {
+			var node = $("<br> <div id ='onlineUser'>"+users[index].userName+"</div>");
+			$("#users").append(node);
+		}
+   }
+});
+
+//Room exist, can not create
+socketio.on("roomNameExist",function(data) {
+   alert("This room name exists");
+});
+
+//Send message
+$("#send").click(function(){
+	var style;
+	if ($("#large").is(':checked') == true && $("#red").is(':checked') == true) {
+		style = "largeAndRed";
+	}
+	else if ($("#large").is(':checked') == true) {
+		style = "large";
+	}
+	else if ($("#red").is(':checked') == true) {
+		style = "red";
+	}
+	else{
+		style = "default";
+	}
+   var msg = $("#message").val();
+   socketio.emit("message_to_server", {message:msg, room:$("#currentRoom").html(), style:style});
+});
+
+//send private message
+$("#privatesend").click(function(){
+	var style;
+	if ($("#privatelarge").is(':checked') == true && $("#privatered").is(':checked') == true) {
+		style = "largeAndRed";
+	}
+	else if ($("#privatelarge").is(':checked') == true) {
+		style = "large";
+	}
+	else if ($("#privatered").is(':checked') == true) {
+		style = "red";
+	}
+	else{
+		style = "default";
+	}
+	var msg = $("#privatemessage").val();
+	var to = $("#sendTo").val();
+	socketio.emit("private_message_to_server", {message:msg, to:to, style:style});
+	//alert("send" + to);
+});
+
+//send picture
+$("#sendPicture").click(function(){
+	var url = $("#picture").val();
+	socketio.emit("image_to_server",{src: url,currentRoom:$("#currentRoom").html()});
+});
+
+//Create a new room
+$("#createRoom").click(function(){
+   var newName = $("#roomName").val();
+   var oldName = $("#currentRoom").html();
+   socketio.emit("createRoom", {roomName:newName, oldName:oldName});
+});
+
+//Create a new room with password
+$("#createPassword").click(function(){
+   var newName = $("#roomName").val();
+   var oldName = $("#currentRoom").html();
+   var password = $("#createRoomPassword ").val();
+   socketio.emit("createPasswordRoom", {roomName:newName, oldName:oldName, password:password});
+});
+
+//Get username
+$("#createUser").click(function() {
+   socketio.emit("createUser", {userName:$("#userName").val()});
+   $("#currentUserName").html($("#userName").val());
+});
+</script>
+</body>
+</html>
